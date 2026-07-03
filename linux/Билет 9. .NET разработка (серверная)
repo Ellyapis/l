@@ -1,0 +1,44 @@
+# Установка VS Code
+sudo snap install code --classic
+
+# Установка .NET SDK 8.0 для разработки приложений на C#
+sudo apt install -y dotnet-sdk-8.0
+
+# Установка PostgreSQL в качестве локального сервера БД
+sudo apt install -y postgresql
+
+# Установка Docker и Docker Compose для контейнеризации .NET-приложений
+sudo apt install -y docker.io docker-compose
+
+
+
+РУКОВОДСТВО ПОЛЬЗОВАТЕЛЯ
+для Инструмента контейнеризации приложений .NET «Docker»
+
+1. Введение и назначение
+
+Docker – это платформа для разработки, доставки и запуска приложений в изолированных контейнерах. Контейнеризация позволяет упаковать приложение вместе со всеми его зависимостями (библиотеки, среда выполнения, конфигурации) в единый образ, который может быть запущен на любой системе, поддерживающей Docker. Для .NET-приложений Docker обеспечивает одинаковую среду выполнения на всех этапах разработки, тестирования и production, устраняя проблемы «работает на моей машине». Docker также упрощает масштабирование, обновление и управление микросервисами.
+
+2. Запуск программы
+
+Docker работает как системная служба. Управление службой:
+
+
+sudo systemctl start docker   # запуск
+sudo systemctl stop docker    # останов
+sudo systemctl status docker  # проверка статуса
+Основные команды выполняются через утилиту docker.
+
+3. Основные функции и приёмы работы
+
+Создание Dockerfile – текстового файла с инструкциями по сборке образа. Пример для .NET-приложения:
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "MyApp.dll"]
+Сборка образа: docker build -t myapp .. Запуск контейнера: docker run -d -p 8080:80 --name myapp_container myapp. Управление контейнерами: docker ps (список запущенных), docker stop myapp_container (остановка), docker rm myapp_container (удаление). Docker Compose используется для управления многоконтейнерными приложениями: в файле docker-compose.yml описываются все сервисы (веб-приложение, БД, кеш), а одной командой docker-compose up -d запускаются все контейнеры.
+
+4. Завершение работы
+
+Остановка контейнера: docker stop <имя_контейнера>. Остановка Docker-демона: sudo systemctl stop docker.

@@ -1,0 +1,36 @@
+# Установка VS Code
+sudo snap install code --classic
+
+# Установка PostgreSQL для хранения медицинских данных
+sudo apt install -y postgresql postgresql-contrib
+
+# Установка Orthanc - DICOM-сервера для медицинских изображений
+sudo apt install -y orthanc
+
+# Установка R для статистического анализа данных
+sudo apt install -y r-base
+
+
+РУКОВОДСТВО ПОЛЬЗОВАТЕЛЯ
+для Системы управления базами данных «PostgreSQL»
+
+1. Введение и назначение
+
+PostgreSQL – объектно-реляционная система управления базами данных (СУБД) с открытым исходным кодом, широко используемая для хранения и обработки чувствительных данных, в том числе медицинских. PostgreSQL поддерживает расширенное шифрование (TLS/SSL для соединений, шифрование на уровне столбцов, TDE), детальное журналирование всех операций (через pgAudit), строгую систему ролей и привилегий, что делает её подходящей для работы с персональными данными в соответствии с требованиями HIPAA и GDPR. СУБД поддерживает сложные запросы, полнотекстовый поиск, геопространственные данные и хранимые процедуры на нескольких языках (PL/pgSQL, Python, Java).
+
+2. Запуск программы
+
+PostgreSQL работает как системная служба. Управление службой:
+
+sudo systemctl start postgresql   # запуск
+sudo systemctl status postgresql  # проверка статуса
+Для работы через командную строку используется утилита psql:
+
+sudo -u postgres psql
+3. Основные функции и приёмы работы
+
+Создание базы данных: CREATE DATABASE medical_db; (внутри psql). Создание пользователя и назначение прав: CREATE USER doctor WITH PASSWORD 'secure123'; GRANT ALL PRIVILEGES ON DATABASE medical_db TO doctor;. Включение аудита: установка расширения pgAudit и настройка параметров в postgresql.conf (shared_preload_libraries = 'pgaudit', pgaudit.log = 'ddl, role, read, write'). Шифрование соединений: настройка SSL в postgresql.conf и создание сертификатов. Резервное копирование: pg_dump medical_db > backup.sql (логический бэкап) или использование WAL-архивации для point-in-time recovery. Восстановление: psql medical_db < backup.sql.
+
+4. Завершение работы
+
+Выход из psql: \q. Остановка службы: sudo systemctl stop postgresql.

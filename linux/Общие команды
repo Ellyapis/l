@@ -1,0 +1,329 @@
+Очистить историю: rm ~/.mozilla/firefox/*.default/*.sqlite
+Удалить firefox и сбросить его: pkill firefox && rm -rf ~/.mozilla/firefox ~/.cache/mozilla ~/.local/share/mozilla ~/.config/mozilla
+
+
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y build-essential clang curl wget git vim nano
+sudo apt install -y libreoffice gimp p7zip-full
+
+настроить интернет-соединение
+ip a - узнать имена сетевых интерфейсов.
+sudo ip link set enp0s3 down  - отключение от сетевого интерфейса enp0s3. (DOWN)
+sudo ip link set enp0s3 up - включение сетевого интерфейса.
+ping -c 4 google.com проверка интернет соединения.
+
+
+sudo apt install -y openssh-server
+sudo systemctl enable --now ssh
+sudo systemctl status ssh
+
+sudo apt install -y cups printer-driver-cups-pdf
+sudo systemctl enable --now cups
+lpstat -p -d  
+
+# Переход в режим администратора
+sudo su -
+
+# Создание резервной копии системы (исключая временные и системные папки)
+tar cvpzf /backup.tgz \
+  --exclude=/proc \
+  --exclude=/lost+found \
+  --exclude=/backup.tgz \
+  --exclude=/mnt \
+  --exclude=/sys \
+  --exclude=/web \
+  /
+
+sudo apt install -y timeshift
+sudo timeshift --create --comments "Initial_backup" --yes
+
+sudo dd if=/dev/sda1 bs=4M status=progress | gzip > /home/ubuntu_system_image.img.gz #заменить dev/sda1 на корневую папку (lsblk)
+
+
+vm.swappiness — определяет склонность системы к использованию swap. Для ВМ лучше снизить, чтобы избежать излишней подкачки. Значение 10 означает, что система будет стараться держать данные в ОЗУ, а не в swap.
+Вывод всех параметров ядра: sysctl –a 
+
+Настроййка ядра:
+sudo ubuntu-drivers autoinstall
+sudo sysctl -w net.ipv4.tcp_syncookies=1        # защита от SYN-атак
+sudo sysctl -w vm.swappiness=10                 # меньше использовать swap
+sudo sysctl -w kernel.printk=3 3 3 3           # уменьшить логи ядра
+sudo sysctl -p --system                         # применить все изменения
+
+или
+
+Настройка ядра:
+echo 'vm.swappiness = 10' | sudo tee -a /etc/sysctl.conf
+vm.vfs_cache_pressure — регулирует кэширование VFS‑объектов (каталогов, inodes). Снижение значения помогает лучше кэшировать данные.
+echo 'vm.vfs_cache_pressure = 50' | sudo tee -a /etc/sysctl.conf
+Сетевая настройка.
+net.core.rmem_max и net.core.wmem_max — увеличивают максимальный размер буферов приёма и отправки. Полезно при интенсивной сетевой нагрузке.
+echo 'net.core.rmem_max = 26214400' | sudo tee -a /etc/sysctl.conf
+echo 'net.core.wmem_max = 26214400' | sudo tee -a /etc/sysctl.conf
+net.ipv4.tcp_timestamps — отключает временные метки TCP, что снижает нагрузку на процессор.
+echo 'net.ipv4.tcp_timestamps = 0' | sudo tee -a /etc/sysctl.conf
+
+Проверить, что настройки применились:
+sysctl vm.swappiness
+sysctl vm.vfs_cache_pressure
+sysctl net.core.rmem_max
+sysctl net.core.wmem_max
+sysctl net.ipv4.tcp_timestamps
+
+
+sudo groupadd developers
+sudo groupadd admins
+
+sudo useradd -m -s /bin/bash alexander
+sudo chpasswd alexander
+sudo usermod -aG admins alexander
+sudo usermod -aG sudo admin
+
+sudo mkdir -p /srv(или opt)/admin_storage
+sudo chown alexander:admins /srv(или opt)/admin_storage
+sudo chmod 770 /srv(или opt)/admin_storage
+
+
+
+sudo apt install -y auditd
+sudo systemctl enable --now auditd
+sudo ausearch -m user_login
+
+sudo apt install -y ufw
+sudo ufw --force enable
+sudo ufw logging on
+sudo ufw allow 22              # если нужен SSH
+sudo ufw status verbose
+
+
+
+
+
+
+# ===== 1. ОБНОВЛЕНИЕ И БАЗОВОЕ ПО =====
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y libreoffice gnome-calculator p7zip-full
+
+# ===== 2. СЕТЬ =====
+ip a
+ping -c 4 google.com
+
+# ===== 3. ЯДРО =====
+sysctl -a
+sudo sysctl -p --system
+sysctl vm.swappiness
+sysctl net.ipv4.tcp_syncookies
+
+# ===== 4. SSH =====
+sudo apt install -y openssh-server
+sudo systemctl enable --now ssh
+sudo systemctl status ssh
+
+# ===== 5. ВИРТУАЛЬНЫЙ ПРИНТЕР =====
+sudo apt install -y cups printer-driver-cups-pdf
+sudo systemctl enable --now cups
+lpstat -p -d
+
+# ===== 6. РЕЗЕРВНОЕ КОПИРОВАНИЕ =====
+sudo apt install -y timeshift
+sudo timeshift --create --comments "Backup" --yes
+sudo timeshift --list
+# (замените /dev/vda2 на ваш раздел)
+sudo dd if=/dev/vda2 bs=4M status=progress | gzip > ~/system_image.img.gz
+
+# ===== 7. ПОЛЬЗОВАТЕЛИ И ГРУППЫ =====
+sudo groupadd developers
+sudo groupadd admins
+sudo useradd -m -g developers exam_user
+echo "exam_user:Password123" | sudo chpasswd
+sudo usermod -aG admins exam_user
+sudo mkdir -p /opt/project
+sudo chown :developers /opt/project
+sudo chmod 770 /opt/project
+ls -la /opt/project
+
+# ===== 8. АУДИТ И ЖУРНАЛЫ =====
+sudo apt install -y auditd
+sudo systemctl enable --now auditd
+echo 'auth,authpriv.* /var/log/auth-monitor.log' | sudo tee /etc/rsyslog.d/99-authmon.conf
+sudo systemctl restart rsyslog
+sudo ls /root > /dev/null
+sudo tail -n 5 /var/log/auth-monitor.log
+
+# ===== 9. ФАЕРВОЛ =====
+sudo apt install -y ufw
+sudo ufw --force enable
+sudo ufw logging on
+sudo ufw allow 22
+sudo ufw status verbose
+
+# ===== 10. СОВМЕСТИМОСТЬ GUI =====
+export QT_AUTO_SCREEN_SCALE_FACTOR=0
+export GDK_SCALE=1
+echo 'export QT_AUTO_SCREEN_SCALE_FACTOR=0' >> ~/.bashrc
+echo 'export GDK_SCALE=1' >> ~/.bashrc
+source ~/.bashrc
+
+# ===== 11. СПЕЦИФИЧНОЕ ПО =====
+sudo snap install android-studio --classic
+sudo apt install -y qemu-system-x86 libvirt-daemon-system
+sudo adduser $USER kvm
+sudo apt install -y virtualbox
+sudo apt install -y clamav
+clamscan -r /home
+
+
+
+
+
+
+
+1. Установка операционной системы, настройка и конфигурирование:
+
+Создание имени виртуальной машины, указание места хранения, а также пути к iso-файлу.
+ 
+Создание пользователя виртуальной машины и установка дополнения гостевой ОС.
+ 
+Настройка параметров виртуальной машины.
+ 
+Список параметров новой виртуальной машины и создание.
+ 
+При установке ОС на виртуальной машине пакет базового ПО был тоже установлен.
+ 
+ 
+настроить интернет-соединение
+ip a - узнать имена сетевых интерфейсов.
+sudo ip link set enp0s3 down  - отключение от сетевого интерфейса enp0s3. (DOWN)
+sudo ip link set enp0s3 up - включение сетевого интерфейса.
+ping -c 4 google.com проверка интернет соединения.
+ 
+Также нужно установить офис 365 для работы с документами.
+Вывод всех параметров ядра: sysctl –a 
+Двунаправленный буфер обмена для удобства.
+ 
+vm.swappiness — определяет склонность системы к использованию swap. Для ВМ лучше снизить, чтобы избежать излишней подкачки. Значение 10 означает, что система будет стараться держать данные в ОЗУ, а не в swap.
+Настройка ядра.
+echo 'vm.swappiness = 10' | sudo tee -a /etc/sysctl.conf
+vm.vfs_cache_pressure — регулирует кэширование VFS‑объектов (каталогов, inodes). Снижение значения помогает лучше кэшировать данные.
+echo 'vm.vfs_cache_pressure = 50' | sudo tee -a /etc/sysctl.conf
+Сетевая настройка.
+net.core.rmem_max и net.core.wmem_max — увеличивают максимальный размер буферов приёма и отправки. Полезно при интенсивной сетевой нагрузке.
+echo 'net.core.rmem_max = 26214400' | sudo tee -a /etc/sysctl.conf
+echo 'net.core.wmem_max = 26214400' | sudo tee -a /etc/sysctl.conf
+net.ipv4.tcp_timestamps — отключает временные метки TCP, что снижает нагрузку на процессор.
+echo 'net.ipv4.tcp_timestamps = 0' | sudo tee -a /etc/sysctl.conf
+
+# 6. Проверить, что настройки применились
+sysctl vm.swappiness
+sysctl vm.vfs_cache_pressure
+sysctl net.core.rmem_max
+sysctl net.core.wmem_max
+sysctl net.ipv4.tcp_timestamps
+
+
+Настройка удалённого доступа
+Установка ssh с помощью менеджера пакетов apt-get:
+sudo apt-get install openssh-server
+
+Проверьте текущее состояние SELinux. Для этого выполните команду:
+sestatus
+Проверьте параметр SELinux status.
+Если параметр имеет значение disabled, дальнейшие действия не требуются.
+Откройте на редактирование файл /etc/selinux/config и измените значение параметра SELINUX на disabled.
+Перезагрузите операционную систему.
+Повторно проверьте состояние SELinux. Для этого выполните команду:
+sestatus
+Параметр SELinux status должен иметь значение disabled.
+SELinux будет отключен.
+Устанавливаем доп. инструменты для работы с сетью и настройками безопасности:
+sudo apt-get install policycoreutils
+sudo apt-get install net-tools
+Проверяем статус SELinux. Состояние должно быть disable.
+sestatus
+
+Если виртуальная машина использует тип сетевого подключения NAT, то первоначально необходимо настроить проброс портов. 
+Пробросим порт хоста 2222 (или любой свободный) на гостевой порт виртуальной машины номер 22 (порт ssh по умолчанию).
+ 
+Т.к. в качестве сетевого подключения у виртуальной машины используется NAT, при подключении мы будем указывать петлевой адрес localhost (127.0.0.1) c портом, на который был назначен проброс.
+ 
+Соглашение на соединение.
+Подсоединение к пользователю ВМ через PuTTY.
+Подключение к пользователю ВМ через консоль Windows.
+sanya@127.0.0.1 -p 2222
+
+Для настройки виртуального принтера нужно зайти в настройки принтеров.
+sudo apt install cups — установка системы печати CUPS (Common UNIX Printing System) из официальных репозиториев.
+sudo systemctl start cups — немедленный запуск службы CUPS в текущем сеансе.
+sudo systemctl enable cups — добавление службы CUPS в автозагрузку, чтобы она запускалась при каждом включении системы.
+sudo apt install printer-driver-cups-pdf — установка драйвера виртуального принтера CUPS-PDF, позволяющего «печатать» документы в PDF-файлы без физического принтера. 
+Обоснование выбора операционной системы и программного обеспечения
+В качестве основной операционной системы выбрана Ubuntu. Данный выбор обусловлен следующими преимуществами: Ubuntu является бесплатной и стабильной системой с длительным сроком поддержки (LTS), что гарантирует безопасность и своевременные обновления. Система имеет развитую экосистему и менеджер пакетов APT, позволяющий легко устанавливать необходимое программное обеспечение. Ubuntu широко распространена в учебных заведениях и в сфере информационных технологий, что делает её удобной платформой для выполнения лабораторных и экзаменационных заданий.
+Для работы с документами и выполнения вычислений выбраны:
+Офисный пакет LibreOffice – полнофункциональный аналог Microsoft Office, совместимый с форматами DOCX, XLSX и PPTX, распространяемый бесплатно и входящий в стандартный репозиторий Ubuntu.
+Калькулятор GNOME – встроенное приложение, поддерживающее как простые арифметические операции, так и инженерный режим для выполнения сложных вычислений.
+Для организации удалённого доступа используется связка PuTTY и OpenSSH Server. OpenSSH Server устанавливается на управляемую машину и обеспечивает зашифрованное соединение по протоколу SSH, что гарантирует безопасность передаваемых данных и защиту от несанкционированного доступа. PuTTY выступает в роли графического SSH-клиента, удобного для подключения с других компьютеров, в том числе под управлением Windows. Данное решение демонстрирует навыки удалённого администрирования в сетях.
+Для создания электронных копий документов выбран виртуальный принтер printer-driver-cups-pdf (CUPS-PDF). Он интегрируется в систему печати CUPS и позволяет «печатать» любые документы в формат PDF без использования реального принтера. Это удобно для сохранения отчётов, веб-страниц и результатов работы в цифровом виде.
+
+
+2. Применение средств защиты компьютерных систем:
+
+Резервное копирование
+sudo su - переход в режим админа
+tar cvpzf backup.tgz –exclude=/proc –exclude=/lost+found –exclude=/backup.tgz –exclude=/mnt –exclude=/sys –exclude=/web / - команда для резервного копирования
+ 
+Создание образа системы
+sudo dd if=/dev/sda bs=8M status=progress | xz -c -T0 > ~/backup.img.xz
+ 
+Создаём группы admini и kvaki
+sudo groupadd admini
+sudo groupadd kvaki
+
+Создаём пользователя kvakushka
+sudo useradd -m -s /bin/bash kvakushka
+sudo passwd kvakushka
+
+Добавляем sanya и kvakushka в группу kvaki
+sudo usermod -aG kvaki sanya
+sudo usermod -aG kvaki kvakushka
+
+Добавляем sanya в группу admini
+sudo usermod -aG admini sanya
+
+Создаём папку и настраиваем права
+sudo mkdir -p /srv/kvaki_project
+sudo chown :kvaki /srv/kvaki_project
+sudo chmod 750 /srv/kvaki_project
+sudo chown sanya:kvaki /srv/kvaki_project
+
+Проверяем права: sanya может создать файл
+sudo -u sanya touch /srv/kvaki_project/test_sanya && echo "sanya: OK"
+
+Проверяем: kvakushka не может создать файл (Permission denied)
+sudo -u kvakushka touch /srv/kvaki_project/test_kvakushka 2>&1 | grep -q "Permission denied" && echo "kvakushka: доступ запрещён" 
+sudo apt install libpam-pwquality -y
+ 
+ 
+Создаём правило rsyslog для мониторинга авторизации
+echo 'auth,authpriv.* /var/log/auth-monitor.log' | sudo tee /etc/rsyslog.d/99-authmon.conf
+
+Перезапускаем службу rsyslog, чтобы применить настройки
+sudo systemctl restart rsyslog
+
+Выполняем любую sudo-команду (ls /root) для генерации записи в логе; вывод подавляем в /dev/null
+sudo ls /root > /dev/null
+
+Проверяем содержимое лог-файла — видим успешные записи о сессиях sudo и выполненных командах
+sudo tail /var/log/auth-monitor.log
+
+Снимки системы.
+sudo apt update && sudo apt install timeshift -y
+Обновляет списки пакетов и устанавливает утилиту Timeshift, которая создаёт снимки системы (аналог «точек восстановления» в Windows).
+sudo timeshift --create
+Запускает создание нового снимка системы.
+Timeshift выбрал тип RSYNC (копирует файлы, работает на любой файловой системе), устройство для хранения — /dev/sda2.
+Синхронизация файлов заняла 107 секунд. Снимок сохранён с именем 2026-06-08_16-53-45 и тегом ondemand (создан вручную).
+ 
+sudo timeshift --list
+Показывает все существующие снимки.
+В выводе виден один снимок (Num 0) с указанной датой.
+ 

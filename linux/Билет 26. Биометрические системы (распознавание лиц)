@@ -1,0 +1,40 @@
+# Установка VS Code
+sudo snap install code --classic
+
+# Установка OpenCV и dlib для распознавания лиц
+sudo apt install -y python3-opencv dlib
+
+# Установка CUDA Toolkit для GPU-ускорения
+sudo apt install -y nvidia-cuda-toolkit
+
+
+РУКОВОДСТВО ПОЛЬЗОВАТЕЛЯ
+для SDK работы с биометрическими камерами (на базе OpenCV)
+
+1. Введение и назначение
+
+OpenCV (Open Source Computer Vision Library) является ведущей библиотекой для реализации систем компьютерного зрения, включая биометрическую идентификацию по лицу. Для работы с биометрическими камерами (высокого разрешения, с поддержкой инфракрасной подсветки, стереокамеры) OpenCV предоставляет интерфейсы для захвата изображений, предварительной обработки, детекции лиц и извлечения биометрических характеристик. Библиотека поддерживает использование GPU через CUDA, что критично для обработки видеопотока в реальном времени. С помощью OpenCV можно реализовать полный конвейер биометрической системы: захват кадра, детекция лица, выравнивание, извлечение признаков (например, через OpenCV FaceRecognizer или интеграцию с нейросетевыми моделями) и сравнение с эталоном.
+
+2. Запуск программы
+
+OpenCV используется как библиотека в коде на Python или C++. Пример захвата изображения с камеры:
+
+import cv2
+cap = cv2.VideoCapture(0)  # 0 - первая камера
+ret, frame = cap.read()
+if ret:
+    cv2.imwrite('face_capture.jpg', frame)
+cap.release()
+3. Основные функции и приёмы работы
+
+Захват с камеры: cv2.VideoCapture(0) для USB-камеры, для IP-камер – RTSP-строка. Детекция лиц: использование предобученных Haar Cascades (cv2.CascadeClassifier('haarcascade_frontalface_default.xml')) или DNN-моделей (OpenCV DNN модуль для загрузки моделей TensorFlow, Caffe, ONNX). Пример детекции:
+
+face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+faces = face_cascade.detectMultiScale(frame, scaleFactor=1.1, minNeighbors=5)
+for (x, y, w, h) in faces:
+    cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+Распознавание: модуль cv2.face содержит реализацию LBPH, Eigenfaces, Fisherfaces для распознавания лиц. Для более высокой точности используются нейросети (например, FaceNet, ArcFace) через DNN модуль. Для работы с высоким разрешением рекомендуется использовать GPU: создать экземпляр cv2.cuda.GpuMat() для переноса данных на GPU. OpenCV также поддерживает работу с depth-камерами для 3D-распознавания лиц, что повышает устойчивость к спуфингу.
+
+4. Завершение работы
+
+Освобождение камеры: cap.release(). Закрытие окон: cv2.destroyAllWindows().
